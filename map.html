@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>NGA Coronavirus Actions Map</title>
+  <meta charset="UTF-8">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.3/d3.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/1.6.9/topojson.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/datamaps/0.5.9/datamaps.usa.min.js" integrity="sha256-1IC+WTTnGREYT+btQjFzzdrlXoRvvGW/mlO6pfl6LnA=" crossorigin="anonymous"></script>
+</head>
+<body>
+  <div id="map" style="position: relative; width: 1000px; height: 600px;"></div>
+
+</body>
+<script>
+  var map = new Datamap({
+    element: document.getElementById('map'),
+    scope: 'usa',
+    fills: {
+      defaultFill: '#ddd'
+    }
+  });
+
+  ACTIONS = {
+
+  }
+
+  var getCellName = function(label) {
+    var cellname_re = /([A-Z]*)([0-9]*)/;
+    var match = cellname_re.exec(label);
+    var name = match[1]+":"+match[2]
+    return name;
+  }
+
+  var getActions = function(data) {
+    for (var entry of data.feed.entry) {
+      var cellName = getCellName(entry.title.$t);
+      if (cellName.split(':')[0] != 'A' && cellName.split(':')[1] == '1') {
+        console.log("Adding:"+entry.title.$t + ": " +entry.content.$t);
+        ACTIONS[entry.content.$t] = entry.title.$t[0];
+      } else {
+        console.log(entry.title.$t[-1]);
+      }
+    }
+  }
+
+  var onDataLoaded = function(data) {
+    getActions(data);
+  };
+</script>
+<script src="https://spreadsheets.google.com/feeds/cells/1OxhgDcTzbmfCNO5ANw8Jnc0c5M2XxIbgpb2uWqRaiGk/1/public/basic?alt=json-in-script&callback=onDataLoaded"></script>
+</html>
