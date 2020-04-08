@@ -7,19 +7,108 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.3/d3.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/1.6.9/topojson.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/datamaps/0.5.9/datamaps.usa.min.js" integrity="sha256-1IC+WTTnGREYT+btQjFzzdrlXoRvvGW/mlO6pfl6LnA=" crossorigin="anonymous"></script>
+
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+
+  <style>
+    .map-panel {
+        height: 100%;
+        width: 100%;
+        display: block;
+    }
+    .small-map {
+      height: 200px;
+      width: 100%;
+    }
+    .main-map {
+      height: 600px;
+    }
+  </style>
+
 </head>
 <body>
-  <div id="map" style="position: relative; width: 1000px; height: 600px;"></div>
-
+  <div class="container">
+      <div class="col-sm-3">
+          <div id="map-pr" class="small-map"></div>
+          <div id="map-gu" class="small-map"></div>
+          <div id="map-as" class="small-map"></div>
+      </div>
+      <div class="col-sm-9">
+          <div id="map-main" class="main-map"></div>
+      </div>
+  </div>
 </body>
 <script>
-  var map = new Datamap({
-    element: document.getElementById('map'),
-    scope: 'usa',
-    fills: {
-      defaultFill: '#ddd'
-    }
-  });
+// using this default usa dataset will allow us to include AK and HI easily.
+// it should also give us the detailed labels for the east coast which is
+// worth taking advantage of.
+var mainmap = new Datamap({
+  element: document.getElementById('map-main'),
+  scope:"usa"
+});
+
+// the following 3 maps all use the same data source file, but with
+// different scopes. In reality, the scope for all of them could just be
+// 'full-usa' which includes everything. Each geometry has the id attached
+// to match the abbreviations in the NGA google doc, so passing in data with
+// that id should be sufficient for styling.
+var prvimap = new Datamap({
+  element: document.getElementById('map-pr'),
+  geographyConfig: {
+    dataUrl: "data/full-usa.json"
+  },
+  scope:"puerto-rico-virgin-islands",
+  setProjection: function(element, options) {
+    var projection, path;
+    projection = d3.geo.equirectangular()
+      .center([-65, 17.9])
+      .scale(2800)
+      .translate([element.offsetWidth / 2, element.offsetHeight / 2]);
+    path = d3.geo.path()
+      .projection( projection );
+    return {path: path, projection: projection};
+  }
+});
+
+var guammap = new Datamap({
+  element: document.getElementById('map-gu'),
+  geographyConfig: {
+    dataUrl: "data/full-usa.json"
+  },
+  scope:"guam-marianas",
+  setProjection: function(element, options) {
+    var projection, path;
+    projection = d3.geo.equirectangular()
+      // [longitude, latitude]
+      .center([145.7446, 15.5619])
+      .scale(2800)
+      .translate([element.offsetWidth / 2, element.offsetHeight / 2]);
+    path = d3.geo.path()
+      .projection( projection );
+    return {path: path, projection: projection};
+  }
+});
+
+var asmap = new Datamap({
+  element: document.getElementById('map-as'),
+  geographyConfig: {
+    dataUrl: "data/full-usa.json"
+  },
+  scope:"american-samoa",
+  setProjection: function(element, options) {
+    var projection, path;
+    projection = d3.geo.equirectangular()
+      // [longitude, latitude]
+      .center([-170.126, -14.20422])
+      .scale(10000)
+      .translate([element.offsetWidth / 2, element.offsetHeight / 2]);
+    path = d3.geo.path()
+      .projection( projection );
+    return {path: path, projection: projection};
+  }
+});
 
   ACTIONS = {
 
@@ -48,5 +137,6 @@
     getActions(data);
   };
 </script>
-<script src="https://spreadsheets.google.com/feeds/cells/1OxhgDcTzbmfCNO5ANw8Jnc0c5M2XxIbgpb2uWqRaiGk/1/public/basic?alt=json-in-script&callback=onDataLoaded"></script>
+<script src="https://spreadsheets.google.com/feeds/cells/1OxhgDcTzbmfCNO5ANw8Jnc0c5M2XxIbgpb2uWqRaiGk/1/public/basic?alt=json-in-script&callback=onDataLoaded">
+</script>
 </html>
