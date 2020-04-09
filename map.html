@@ -94,7 +94,7 @@
   var dataFactory = function (sheetData, mapType) {
     var mapData = {};
     for (region in sheetData) {
-      mapData[region] = {"fillKey": sheetData[region][mapType]}
+      mapData[region] = {"fillKey": sheetData[region][mapType], "info": sheetData[region][mapType]}
     };
     return mapData;
   }
@@ -114,7 +114,11 @@
       element: document.getElementById('map-main'),
       geographyConfig: {
         highlightBorderColor: '#bada55',
-        highlightBorderWidth: 3
+        highlightBorderWidth: 3,
+        popupTemplate: function(geography, data) {
+          return '<div class="hoverinfo"><strong>' + geography.properties.name + '</strong></div>\
+                 <div class="hoverinfo"><em>' + data.info + '</em></div>'
+        }
       },
       scope:"usa",
       fills: fills,
@@ -135,7 +139,8 @@
       geographyConfig: {
         dataUrl: "data/full-usa.json",
         popupTemplate: function(geography, data) {
-          return '<div class="hoverinfo"><strong>' + geography.properties.Name + '</strong></div>'
+          return '<div class="hoverinfo"><strong>' + geography.properties.Name + '</strong></div>\
+                 <div class="hoverinfo"><em>' + data.info + '</em></div>'
         }
       },
       scope:"puerto-rico-virgin-islands",
@@ -158,7 +163,8 @@
       geographyConfig: {
         dataUrl: "data/full-usa.json",
         popupTemplate: function(geography, data) {
-          return '<div class="hoverinfo"><strong>' + geography.properties.Name + '</strong></div>'
+          return '<div class="hoverinfo"><strong>' + geography.properties.Name + '</strong></div>\
+                 <div class="hoverinfo"><em>' + data.info + '</em></div>'
         }
       },
       scope:"guam-marianas",
@@ -182,7 +188,8 @@
       geographyConfig: {
         dataUrl: "data/full-usa.json",
         popupTemplate: function(geography, data) {
-          return '<div class="hoverinfo"><strong>' + geography.properties.Name + '</strong></div>'
+          return '<div class="hoverinfo"><strong>' + geography.properties.Name + '</strong></div>\
+                 <div class="hoverinfo"><em>' + data.info + '</em></div>'
         }
       },
       scope:"american-samoa",
