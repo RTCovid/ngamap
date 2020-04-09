@@ -30,6 +30,7 @@
 </head>
 <body>
   <div class="container">
+    <div class="row">
       <div class="col-sm-3">
           <div id="map-pr" class="small-map"></div>
           <div id="map-gu" class="small-map"></div>
@@ -38,80 +39,145 @@
       <div class="col-sm-9">
           <div id="map-main" class="main-map"></div>
       </div>
+    </div>
+    <div class="row">
+      <div class="col-12">
+        <select id="map-type" style=""></select>
+      </div>
+    </div>
   </div>
 </body>
 <script>
-// using this default usa dataset will allow us to include AK and HI easily.
-// it should also give us the detailed labels for the east coast which is
-// worth taking advantage of.
-var mainmap = new Datamap({
-  element: document.getElementById('map-main'),
-  scope:"usa"
-});
 
-// the following 3 maps all use the same data source file, but with
-// different scopes. In reality, the scope for all of them could just be
-// 'full-usa' which includes everything. Each geometry has the id attached
-// to match the abbreviations in the NGA google doc, so passing in data with
-// that id should be sufficient for styling.
-var prvimap = new Datamap({
-  element: document.getElementById('map-pr'),
-  geographyConfig: {
-    dataUrl: "data/full-usa.json"
-  },
-  scope:"puerto-rico-virgin-islands",
-  setProjection: function(element, options) {
-    var projection, path;
-    projection = d3.geo.equirectangular()
-      .center([-65, 17.9])
-      .scale(2800)
-      .translate([element.offsetWidth / 2, element.offsetHeight / 2]);
-    path = d3.geo.path()
-      .projection( projection );
-    return {path: path, projection: projection};
+  // refactored the center coordinates and scale, as we may need to conditionally
+  // change them for mobile, etc.
+  var asMapInfo = {"center": [-170.126, -14.20422], "scale": 10000};
+  var prMapInfo = {"center": [-65, 17.9], "scale": 2800};
+  var guMapInfo = {"center": [145.7446, 15.5619], "scale": 2800};
+
+  // these must match the values in the spreadsheet for each column
+  // this could be turned into a function to eliminate many duplicated styles.
+  var fillFactory = {
+    "Emergency Declaration" : {
+      "Yes" : 'red',
+      "defaultFill": 'green'
+    },
+    "National Guard State Activation" : {
+      "Yes" : 'red',
+      "defaultFill": 'green'
+    },
   }
-});
-
-var guammap = new Datamap({
-  element: document.getElementById('map-gu'),
-  geographyConfig: {
-    dataUrl: "data/full-usa.json"
-  },
-  scope:"guam-marianas",
-  setProjection: function(element, options) {
-    var projection, path;
-    projection = d3.geo.equirectangular()
-      // [longitude, latitude]
-      .center([145.7446, 15.5619])
-      .scale(2800)
-      .translate([element.offsetWidth / 2, element.offsetHeight / 2]);
-    path = d3.geo.path()
-      .projection( projection );
-    return {path: path, projection: projection};
+  
+  // iterate full sheet contents and pull out the relevant data for this map style
+  var dataFactory = function (sheetData, mapType) {
+    var mapData = {};
+    for (region in sheetData) {
+      mapData[region] = {"fillKey": sheetData[region][mapType]}
+    };
+    return mapData;
   }
-});
 
-var asmap = new Datamap({
-  element: document.getElementById('map-as'),
-  geographyConfig: {
-    dataUrl: "data/full-usa.json"
-  },
-  scope:"american-samoa",
-  setProjection: function(element, options) {
-    var projection, path;
-    projection = d3.geo.equirectangular()
-      // [longitude, latitude]
-      .center([-170.126, -14.20422])
-      .scale(10000)
-      .translate([element.offsetWidth / 2, element.offsetHeight / 2]);
-    path = d3.geo.path()
-      .projection( projection );
-    return {path: path, projection: projection};
-  }
-});
+  // fully reinstantiates all four maps with new data and with new fill values.
+  // map.updateChloropleth can be used to replace the data in the map, but I don't
+  // think that new fills can be put in, so I went with this full replacement instead.
+  var resetAllMaps = function (fills, data) {
+  
+    $(".main-map").html("")
+    $(".small-map").html("")
 
-  ACTIONS = {
+    // using this default usa dataset will allow us to include AK and HI easily.
+    // it should also give us the detailed labels for the east coast which is
+    // worth taking advantage of.
+    var mainmap = new Datamap({
+      element: document.getElementById('map-main'),
+      geographyConfig: {
+        highlightBorderColor: '#bada55',
+        highlightBorderWidth: 3
+      },
+      scope:"usa",
+      fills: fills,
+      data: data,
+    });
 
+    <!-- mainmap.labels({labelColor: 'blue', fontSize: 12}); -->
+    mainmap.labels();
+    mainmap.legend();
+
+    // the following 3 maps all use the same data source file, but with
+    // different scopes. In reality, the scope for all of them could just be
+    // 'full-usa' which includes everything. Each geometry has the id attached
+    // to match the abbreviations in the NGA google doc, so passing in data with
+    // that id should be sufficient for styling.
+    var prvimap = new Datamap({
+      element: document.getElementById('map-pr'),
+      geographyConfig: {
+        dataUrl: "data/full-usa.json",
+        popupTemplate: function(geography, data) {
+          return '<div class="hoverinfo"><strong>' + geography.properties.Name + '</strong></div>'
+        }
+      },
+      scope:"puerto-rico-virgin-islands",
+      fills: fills,
+      data: data,
+      setProjection: function(element, options) {
+        var projection, path;
+        projection = d3.geo.equirectangular()
+          .center(prMapInfo['center'])
+          .scale(prMapInfo['scale'])
+          .translate([element.offsetWidth / 2, element.offsetHeight / 2]);
+        path = d3.geo.path()
+          .projection( projection );
+        return {path: path, projection: projection};
+      }
+    });
+
+    var guammap = new Datamap({
+      element: document.getElementById('map-gu'),
+      geographyConfig: {
+        dataUrl: "data/full-usa.json",
+        popupTemplate: function(geography, data) {
+          return '<div class="hoverinfo"><strong>' + geography.properties.Name + '</strong></div>'
+        }
+      },
+      scope:"guam-marianas",
+      fills: fills,
+      data: data,
+      setProjection: function(element, options) {
+        var projection, path;
+        projection = d3.geo.equirectangular()
+          // [longitude, latitude]
+          .center(guMapInfo['center'])
+          .scale(guMapInfo['scale'])
+          .translate([element.offsetWidth / 2, element.offsetHeight / 2]);
+        path = d3.geo.path()
+          .projection( projection );
+        return {path: path, projection: projection};
+      }
+    });
+
+    var asmap = new Datamap({
+      element: document.getElementById('map-as'),
+      geographyConfig: {
+        dataUrl: "data/full-usa.json",
+        popupTemplate: function(geography, data) {
+          return '<div class="hoverinfo"><strong>' + geography.properties.Name + '</strong></div>'
+        }
+      },
+      scope:"american-samoa",
+      fills: fills,
+      data: data,
+      setProjection: function(element, options) {
+        var projection, path;
+        projection = d3.geo.equirectangular()
+          // [longitude, latitude]
+          .center(asMapInfo['center'])
+          .scale(asMapInfo['scale'])
+          .translate([element.offsetWidth / 2, element.offsetHeight / 2]);
+        path = d3.geo.path()
+          .projection( projection );
+        return {path: path, projection: projection};
+      }
+    });
   }
 
   var getCellName = function(label) {
@@ -119,23 +185,70 @@ var asmap = new Datamap({
     var match = cellname_re.exec(label);
     var name = match[1]+":"+match[2]
     return name;
-  }
+  };
 
-  var getActions = function(data) {
+  var getSheetData = function(data) {
+    var sheetData = {}
+    var headers = {};
+    var currentStateTerritory;
     for (var entry of data.feed.entry) {
+        
       var cellName = getCellName(entry.title.$t);
-      if (cellName.split(':')[0] != 'A' && cellName.split(':')[1] == '1') {
-        console.log("Adding:"+entry.title.$t + ": " +entry.content.$t);
-        ACTIONS[entry.content.$t] = entry.title.$t[0];
+
+      var column = cellName.split(':')[0]
+      var row = parseInt(cellName.split(':')[1])
+      var content = entry.content.$t;
+
+      // for the first row, push to headers object. skip if it's column "A" ("State")
+      if (row == 1) { if (column != "A") { headers[column] = content} continue };
+
+      // I imagine this second row could just be removed from the sheet?
+      // Not sure what it's for but just ignoring it here for now.
+      if (row == 2) continue;
+
+      if (column == 'A') {
+        currentStateTerritory = content.slice(content.indexOf("(")+1,content.indexOf(")"));
+        sheetData[currentStateTerritory] = {}
+        for (header in headers) {
+          if (header == "A") continue;
+          sheetData[currentStateTerritory][headers[header]] = "";
+        }
       } else {
-        console.log(entry.title.$t[-1]);
+        sheetData[currentStateTerritory][headers[column]] = content
       }
     }
+    console.log(sheetData);
+    
+    // put all of the headers into a dropdown picker
+    var optionsStr = "";
+    for (header in headers) {
+      optionsStr += "<option>" + headers[header] + "</option>"
+    }
+    $("#map-type").html(optionsStr);
+
+    return sheetData
   }
 
+  var fullData;
   var onDataLoaded = function(data) {
-    getActions(data);
+    fullData = getSheetData(data);
+    updateMaps()
   };
+  
+  var mapType;
+  var fills;
+  var updateMaps = function() {
+    mapType = $("#map-type").val();
+    fills = fillFactory[mapType];
+    mapData = dataFactory(fullData, mapType);
+    resetAllMaps(fills, mapData)
+  }
+  
+  $( "#map-type" ).change(function() {
+    updateMaps();
+  });
+  
+  
 </script>
 <script src="https://spreadsheets.google.com/feeds/cells/1OxhgDcTzbmfCNO5ANw8Jnc0c5M2XxIbgpb2uWqRaiGk/1/public/basic?alt=json-in-script&callback=onDataLoaded">
 </script>
