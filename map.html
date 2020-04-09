@@ -13,17 +13,41 @@
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
 
   <style>
+    #maps {
+      display: inline-flex;
+      position: relative;
+    }
     .map-panel {
         height: 100%;
         width: 100%;
         display: block;
     }
     .small-map {
+      position: absolute;
       height: 200px;
-      width: 100%;
+      width: 200px;
     }
     .main-map {
       height: 600px;
+    }
+    #map-pr {
+      height: 60px;
+      width: 100px;
+      bottom: 0;
+      right: 100px;
+    }
+    #map-as {
+      height: 80px;
+      bottom: 150px;
+      left: 0;
+    }
+    #map-gu {
+      left: 0;
+      top: 100px;
+    }
+
+    #map-type {
+      margin: 0 auto;
     }
   </style>
 
@@ -31,18 +55,16 @@
 <body>
   <div class="container">
     <div class="row">
-      <div class="col-sm-3">
-          <div id="map-pr" class="small-map"></div>
-          <div id="map-gu" class="small-map"></div>
-          <div id="map-as" class="small-map"></div>
-      </div>
-      <div class="col-sm-9">
-          <div id="map-main" class="main-map"></div>
-      </div>
-    </div>
-    <div class="row">
       <div class="col-12">
         <select id="map-type" style=""></select>
+      </div>
+    </div>
+    <div class="row" id="maps">
+      <div class="col-12">
+        <div id="map-pr" class="small-map"></div>
+        <div id="map-gu" class="small-map"></div>
+        <div id="map-as" class="small-map"></div>
+        <div id="map-main" class="main-map"></div>
       </div>
     </div>
   </div>
@@ -51,8 +73,8 @@
 
   // refactored the center coordinates and scale, as we may need to conditionally
   // change them for mobile, etc.
-  var asMapInfo = {"center": [-170.126, -14.20422], "scale": 10000};
-  var prMapInfo = {"center": [-65, 17.9], "scale": 2800};
+  var asMapInfo = {"center": [-170.126, -14.20422], "scale": 4000};
+  var prMapInfo = {"center": [-65.7, 17.9], "scale": 1800};
   var guMapInfo = {"center": [145.7446, 15.5619], "scale": 2800};
 
   // these must match the values in the spreadsheet for each column
