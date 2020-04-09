@@ -79,15 +79,28 @@
 
   // these must match the values in the spreadsheet for each column
   // this could be turned into a function to eliminate many duplicated styles.
-  var fillFactory = {
-    "Emergency Declaration" : {
-      "Yes" : 'red',
-      "defaultFill": 'green'
-    },
-    "National Guard State Activation" : {
-      "Yes" : 'red',
-      "defaultFill": 'green'
-    },
+  var fillFactory = function (validOptions, visualizationType) {
+    console.log(validOptions);
+    console.log(visualizationType);
+    var fills = {}
+    var colorRamp = [
+        "#401E3C",
+        "#803C79",
+        "#BF5AB5",
+        "#E66CD9",
+        "#FF78F1"
+    ]
+    switch (visualizationType) {
+      case "Binary":
+        fills[validOptions[0]] = '#401E3C';
+        fills[validOptions[1]] = '#96FF6B';
+      case "Gradient":
+        for (i = 0; i < validOptions.length; i++) {
+          fills[validOptions[i]] = colorRamp[i]
+        }
+    }
+    fills["defaultFill"] = '#96FF6B';
+    return fills
   }
   
   // iterate full sheet contents and pull out the relevant data for this map style
@@ -216,6 +229,8 @@
     return name;
   };
 
+  var visualizationTypes = {};
+  var validationRulesets = {};
   var getSheetData = function(data) {
     var sheetData = {}
     var headers = {};
@@ -229,11 +244,20 @@
       var content = entry.content.$t;
 
       // for the first row, push to headers object. skip if it's column "A" ("State")
-      if (row == 1) { if (column != "A") { headers[column] = content} continue };
+      if (row == 1) { if (column != "A") {
+        headers[column] = content;
+        visualizationTypes[content] = false;
+      } continue };
 
-      // I imagine this second row could just be removed from the sheet?
-      // Not sure what it's for but just ignoring it here for now.
-      if (row == 2) continue;
+      // Link the visualization types with each column header
+      if (row == 2) { if (column != "A") {
+        visualizationTypes[headers[column]] = content;
+      } continue };
+
+      // Link the validation rule sets with each column header
+      if (row == 3) { if (column != "A") {
+        validationRulesets[headers[column]] = content;
+      } continue };
 
       if (column == 'A') {
         currentStateTerritory = content.slice(content.indexOf("(")+1,content.indexOf(")"));
@@ -246,12 +270,13 @@
         sheetData[currentStateTerritory][headers[column]] = content
       }
     }
-    console.log(sheetData);
     
     // put all of the headers into a dropdown picker
     var optionsStr = "";
     for (header in headers) {
-      optionsStr += "<option>" + headers[header] + "</option>"
+      if (visualizationTypes[headers[header]] != false) { 
+        optionsStr += "<option>" + headers[header] + "</option>"
+      }
     }
     $("#map-type").html(optionsStr);
 
@@ -264,11 +289,12 @@
     updateMaps()
   };
   
-  var mapType;
-  var fills;
   var updateMaps = function() {
-    mapType = $("#map-type").val();
-    fills = fillFactory[mapType];
+    var mapType = $("#map-type").val();
+    var validOptions = validationData[validationRulesets[mapType]]
+    var visualizationType = visualizationTypes[mapType]
+    
+    var fills = fillFactory(validOptions, visualizationType);
     mapData = dataFactory(fullData, mapType);
     resetAllMaps(fills, mapData)
   }
@@ -276,7 +302,28 @@
   $( "#map-type" ).change(function() {
     updateMaps();
   });
-  
+
+  var validationData = {}
+  var onValidationLoaded = function(data) {
+    
+    var headers = {};
+    for (var entry of data.feed.entry) {
+        
+      var cellName = getCellName(entry.title.$t);
+
+      var column = cellName.split(':')[0]
+      var row = parseInt(cellName.split(':')[1])
+      var content = entry.content.$t;
+
+      // for the first row, push to headers object. skip if it's column "A" ("State")
+      if (row == 1) {
+        headers[column] = content;
+        validationData[headers[column]] = []
+      } else {
+        validationData[headers[column]].push(content)
+      }
+    }
+  };
   
 </script>
 <script src="https://spreadsheets.google.com/feeds/cells/1I1kGCKtjh2n4PuABP9BW2rseb7uC-1puM1geVjDRIcc/2/public/basic?alt=json-in-script&callback=onValidationLoaded">
