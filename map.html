@@ -167,8 +167,8 @@
     var mainmap = new Datamap({
       element: document.getElementById('map-main'),
       geographyConfig: {
-        highlightBorderColor: '#bada55',
-        highlightBorderWidth: 3,
+        highlightBorderColor: '#FFC800',
+        highlightBorderWidth: 2,
         popupTemplate: function(geography, data) {
           return '<div class="hoverinfo"><strong>' + geography.properties.name + '</strong></div>\
                  <div class="hoverinfo"><em>' + data.info + '</em></div>'
@@ -192,6 +192,8 @@
       element: document.getElementById('map-pr'),
       geographyConfig: {
         dataUrl: "data/full-usa.json",
+        highlightBorderColor: '#FFC800',
+        highlightBorderWidth: 2,
         popupTemplate: function(geography, data) {
           return '<div class="hoverinfo"><strong>' + geography.properties.Name + '</strong></div>\
                  <div class="hoverinfo"><em>' + data.info + '</em></div>'
@@ -216,6 +218,8 @@
       element: document.getElementById('map-gu'),
       geographyConfig: {
         dataUrl: "data/full-usa.json",
+        highlightBorderColor: '#FFC800',
+        highlightBorderWidth: 2,
         popupTemplate: function(geography, data) {
           return '<div class="hoverinfo"><strong>' + geography.properties.Name + '</strong></div>\
                  <div class="hoverinfo"><em>' + data.info + '</em></div>'
@@ -241,6 +245,8 @@
       element: document.getElementById('map-as'),
       geographyConfig: {
         dataUrl: "data/full-usa.json",
+        highlightBorderColor: '#FFC800',
+        highlightBorderWidth: 2,
         popupTemplate: function(geography, data) {
           return '<div class="hoverinfo"><strong>' + geography.properties.Name + '</strong></div>\
                  <div class="hoverinfo"><em>' + data.info + '</em></div>'
