@@ -18,11 +18,12 @@
     body {
         font-family: 'Raleway', sans-serif !important;
     }
-        .datamaps-legend dl dt {
+    .datamaps-legend dl dt {
         font-family: 'Raleway', sans-serif;
     }
     .labels text {
         font-family: 'Raleway', sans-serif !important;
+        font-size: 12px !important;
     }
     #maps {
       display: inline-flex;
@@ -58,16 +59,24 @@
     }
 
     #gu-label {
-        top: 320px;
-        left: 25px;
+        top: 300px;
+        left: 45px;
     }
     #pr-label {
-        top: 500px;
-        left: 945px;
+        top: 530px;
+        left: 985px;
     }
     #as-label {
-        top: 440px;
-        left: 45px;
+        top: 405px;
+        left: 95px;
+    }
+    #cnmi-label {
+        top: 220px;
+        left: 75px;
+    }
+    #usvi-label {
+        top: 560px;
+        left: 1060px;
     }
     #ak-label {
         top: 550px;
@@ -80,6 +89,7 @@
     .floating-label {
         position: absolute;
         text-align: center;
+        font-size: 12px;
     }
 
     #map-type {
@@ -97,11 +107,13 @@
     </div>
     <div class="row" id="maps">
       <div class="col-12">
-        <p id="pr-label" class="floating-label">Puerto Rico & <br>U.S. Virgin Islands</p>
-        <p id="gu-label" class="floating-label">Guam & <br>N. Marianas Islands</p>
-        <p id="as-label" class="floating-label">American Samoa</p>
-        <p id="ak-label" class="floating-label">Alaska</p>
-        <p id="hi-label" class="floating-label">Hawaii</p>
+        <p id="pr-label" class="floating-label">PR</p>
+        <p id="usvi-label" class="floating-label">USVI</p>
+        <p id="gu-label" class="floating-label">GU</p>
+        <p id="cnmi-label" class="floating-label">CNMI</p>
+        <p id="as-label" class="floating-label">AS</p>
+        <!-- <p id="ak-label" class="floating-label">Alaska</p> -->
+        <!-- <p id="hi-label" class="floating-label">Hawaii</p> -->
         <div id="map-pr" class="small-map"></div>
         <div id="map-gu" class="small-map"></div>
         <div id="map-as" class="small-map"></div>
@@ -116,7 +128,7 @@
   // change them for mobile, etc.
   var asMapInfo = {"center": [-170.126, -14.20422], "scale": 4000};
   var prMapInfo = {"center": [-65.7, 17.9], "scale": 1800};
-  var guMapInfo = {"center": [145.7446, 15.5619], "scale": 2800};
+  var guMapInfo = {"center": [145.7446, 15.1619], "scale": 2800};
 
   // these must match the values in the spreadsheet for each column
   // this could be turned into a function to eliminate many duplicated styles.
@@ -269,9 +281,9 @@
     });
 
     // once the map is rendered, hide the default AK and HI labels.
-    $("text").each(function (index, element) {
-      if (element.innerHTML == "HI" || element.innerHTML == "AK") { $(element).hide() }
-    });
+    //$("text").each(function (index, element) {
+    //  if (element.innerHTML == "HI" || element.innerHTML == "AK") { $(element).hide() }
+    //});
   }
 
   var getCellName = function(label) {
