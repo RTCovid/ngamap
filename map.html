@@ -7,22 +7,219 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.3/d3.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/1.6.9/topojson.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/datamaps/0.5.9/datamaps.usa.min.js" integrity="sha256-1IC+WTTnGREYT+btQjFzzdrlXoRvvGW/mlO6pfl6LnA=" crossorigin="anonymous"></script>
+
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+
+  <style>
+    #maps {
+      display: inline-flex;
+      position: relative;
+    }
+    .map-panel {
+        height: 100%;
+        width: 100%;
+        display: block;
+    }
+    .small-map {
+      position: absolute;
+      height: 200px;
+      width: 200px;
+    }
+    .main-map {
+      height: 600px;
+    }
+    #map-pr {
+      height: 60px;
+      width: 100px;
+      bottom: 0;
+      right: 100px;
+    }
+    #map-as {
+      height: 80px;
+      bottom: 150px;
+      left: 0;
+    }
+    #map-gu {
+      left: 0;
+      top: 100px;
+    }
+
+    #map-type {
+      margin: 0 auto;
+    }
+  </style>
+
 </head>
 <body>
-  <div id="map" style="position: relative; width: 1000px; height: 600px;"></div>
-
+  <div class="container">
+    <div class="row">
+      <div class="col-12">
+        <select id="map-type" style=""></select>
+      </div>
+    </div>
+    <div class="row" id="maps">
+      <div class="col-12">
+        <div id="map-pr" class="small-map"></div>
+        <div id="map-gu" class="small-map"></div>
+        <div id="map-as" class="small-map"></div>
+        <div id="map-main" class="main-map"></div>
+      </div>
+    </div>
+  </div>
 </body>
 <script>
-  var map = new Datamap({
-    element: document.getElementById('map'),
-    scope: 'usa',
-    fills: {
-      defaultFill: '#ddd'
+
+  // refactored the center coordinates and scale, as we may need to conditionally
+  // change them for mobile, etc.
+  var asMapInfo = {"center": [-170.126, -14.20422], "scale": 4000};
+  var prMapInfo = {"center": [-65.7, 17.9], "scale": 1800};
+  var guMapInfo = {"center": [145.7446, 15.5619], "scale": 2800};
+
+  // these must match the values in the spreadsheet for each column
+  // this could be turned into a function to eliminate many duplicated styles.
+  var fillFactory = function (validOptions, visualizationType) {
+    console.log(validOptions);
+    console.log(visualizationType);
+    var fills = {}
+    var colorRamp = [
+        "#401E3C",
+        "#803C79",
+        "#BF5AB5",
+        "#E66CD9",
+        "#FF78F1"
+    ]
+    switch (visualizationType) {
+      case "Binary":
+        fills[validOptions[0]] = '#401E3C';
+        fills[validOptions[1]] = '#96FF6B';
+      case "Gradient":
+        for (i = 0; i < validOptions.length; i++) {
+          fills[validOptions[i]] = colorRamp[i]
+        }
     }
-  });
+    fills["defaultFill"] = '#96FF6B';
+    return fills
+  }
+  
+  // iterate full sheet contents and pull out the relevant data for this map style
+  var dataFactory = function (sheetData, mapType) {
+    var mapData = {};
+    for (region in sheetData) {
+      mapData[region] = {"fillKey": sheetData[region][mapType], "info": sheetData[region][mapType]}
+    };
+    return mapData;
+  }
 
-  ACTIONS = {
+  // fully reinstantiates all four maps with new data and with new fill values.
+  // map.updateChloropleth can be used to replace the data in the map, but I don't
+  // think that new fills can be put in, so I went with this full replacement instead.
+  var resetAllMaps = function (fills, data) {
+  
+    $(".main-map").html("")
+    $(".small-map").html("")
 
+    // using this default usa dataset will allow us to include AK and HI easily.
+    // it should also give us the detailed labels for the east coast which is
+    // worth taking advantage of.
+    var mainmap = new Datamap({
+      element: document.getElementById('map-main'),
+      geographyConfig: {
+        highlightBorderColor: '#bada55',
+        highlightBorderWidth: 3,
+        popupTemplate: function(geography, data) {
+          return '<div class="hoverinfo"><strong>' + geography.properties.name + '</strong></div>\
+                 <div class="hoverinfo"><em>' + data.info + '</em></div>'
+        }
+      },
+      scope:"usa",
+      fills: fills,
+      data: data,
+    });
+
+    <!-- mainmap.labels({labelColor: 'blue', fontSize: 12}); -->
+    mainmap.labels();
+    mainmap.legend();
+
+    // the following 3 maps all use the same data source file, but with
+    // different scopes. In reality, the scope for all of them could just be
+    // 'full-usa' which includes everything. Each geometry has the id attached
+    // to match the abbreviations in the NGA google doc, so passing in data with
+    // that id should be sufficient for styling.
+    var prvimap = new Datamap({
+      element: document.getElementById('map-pr'),
+      geographyConfig: {
+        dataUrl: "data/full-usa.json",
+        popupTemplate: function(geography, data) {
+          return '<div class="hoverinfo"><strong>' + geography.properties.Name + '</strong></div>\
+                 <div class="hoverinfo"><em>' + data.info + '</em></div>'
+        }
+      },
+      scope:"puerto-rico-virgin-islands",
+      fills: fills,
+      data: data,
+      setProjection: function(element, options) {
+        var projection, path;
+        projection = d3.geo.equirectangular()
+          .center(prMapInfo['center'])
+          .scale(prMapInfo['scale'])
+          .translate([element.offsetWidth / 2, element.offsetHeight / 2]);
+        path = d3.geo.path()
+          .projection( projection );
+        return {path: path, projection: projection};
+      }
+    });
+
+    var guammap = new Datamap({
+      element: document.getElementById('map-gu'),
+      geographyConfig: {
+        dataUrl: "data/full-usa.json",
+        popupTemplate: function(geography, data) {
+          return '<div class="hoverinfo"><strong>' + geography.properties.Name + '</strong></div>\
+                 <div class="hoverinfo"><em>' + data.info + '</em></div>'
+        }
+      },
+      scope:"guam-marianas",
+      fills: fills,
+      data: data,
+      setProjection: function(element, options) {
+        var projection, path;
+        projection = d3.geo.equirectangular()
+          // [longitude, latitude]
+          .center(guMapInfo['center'])
+          .scale(guMapInfo['scale'])
+          .translate([element.offsetWidth / 2, element.offsetHeight / 2]);
+        path = d3.geo.path()
+          .projection( projection );
+        return {path: path, projection: projection};
+      }
+    });
+
+    var asmap = new Datamap({
+      element: document.getElementById('map-as'),
+      geographyConfig: {
+        dataUrl: "data/full-usa.json",
+        popupTemplate: function(geography, data) {
+          return '<div class="hoverinfo"><strong>' + geography.properties.Name + '</strong></div>\
+                 <div class="hoverinfo"><em>' + data.info + '</em></div>'
+        }
+      },
+      scope:"american-samoa",
+      fills: fills,
+      data: data,
+      setProjection: function(element, options) {
+        var projection, path;
+        projection = d3.geo.equirectangular()
+          // [longitude, latitude]
+          .center(asMapInfo['center'])
+          .scale(asMapInfo['scale'])
+          .translate([element.offsetWidth / 2, element.offsetHeight / 2]);
+        path = d3.geo.path()
+          .projection( projection );
+        return {path: path, projection: projection};
+      }
+    });
   }
 
   var getCellName = function(label) {
@@ -30,23 +227,107 @@
     var match = cellname_re.exec(label);
     var name = match[1]+":"+match[2]
     return name;
-  }
+  };
 
-  var getActions = function(data) {
+  var visualizationTypes = {};
+  var validationRulesets = {};
+  var getSheetData = function(data) {
+    var sheetData = {}
+    var headers = {};
+    var currentStateTerritory;
     for (var entry of data.feed.entry) {
+        
       var cellName = getCellName(entry.title.$t);
-      if (cellName.split(':')[0] != 'A' && cellName.split(':')[1] == '1') {
-        console.log("Adding:"+entry.title.$t + ": " +entry.content.$t);
-        ACTIONS[entry.content.$t] = entry.title.$t[0];
+
+      var column = cellName.split(':')[0]
+      var row = parseInt(cellName.split(':')[1])
+      var content = entry.content.$t;
+
+      // for the first row, push to headers object. skip if it's column "A" ("State")
+      if (row == 1) { if (column != "A") {
+        headers[column] = content;
+        visualizationTypes[content] = false;
+      } continue };
+
+      // Link the visualization types with each column header
+      if (row == 2) { if (column != "A") {
+        visualizationTypes[headers[column]] = content;
+      } continue };
+
+      // Link the validation rule sets with each column header
+      if (row == 3) { if (column != "A") {
+        validationRulesets[headers[column]] = content;
+      } continue };
+
+      if (column == 'A') {
+        currentStateTerritory = content.slice(content.indexOf("(")+1,content.indexOf(")"));
+        sheetData[currentStateTerritory] = {}
+        for (header in headers) {
+          if (header == "A") continue;
+          sheetData[currentStateTerritory][headers[header]] = "";
+        }
       } else {
-        console.log(entry.title.$t[-1]);
+        sheetData[currentStateTerritory][headers[column]] = content
       }
     }
+    
+    // put all of the headers into a dropdown picker
+    var optionsStr = "";
+    for (header in headers) {
+      if (visualizationTypes[headers[header]] != false) { 
+        optionsStr += "<option>" + headers[header] + "</option>"
+      }
+    }
+    $("#map-type").html(optionsStr);
+
+    return sheetData
   }
 
+  var fullData;
   var onDataLoaded = function(data) {
-    getActions(data);
+    fullData = getSheetData(data);
+    updateMaps()
   };
+  
+  var updateMaps = function() {
+    var mapType = $("#map-type").val();
+    var validOptions = validationData[validationRulesets[mapType]]
+    var visualizationType = visualizationTypes[mapType]
+    
+    var fills = fillFactory(validOptions, visualizationType);
+    mapData = dataFactory(fullData, mapType);
+    resetAllMaps(fills, mapData)
+  }
+  
+  $( "#map-type" ).change(function() {
+    updateMaps();
+  });
+
+  var validationData = {}
+  var onValidationLoaded = function(data) {
+    
+    var headers = {};
+    for (var entry of data.feed.entry) {
+        
+      var cellName = getCellName(entry.title.$t);
+
+      var column = cellName.split(':')[0]
+      var row = parseInt(cellName.split(':')[1])
+      var content = entry.content.$t;
+
+      // for the first row, push to headers object. skip if it's column "A" ("State")
+      if (row == 1) {
+        headers[column] = content;
+        validationData[headers[column]] = []
+      } else {
+        validationData[headers[column]].push(content)
+      }
+    }
+  };
+  
 </script>
-<script src="https://spreadsheets.google.com/feeds/cells/1OxhgDcTzbmfCNO5ANw8Jnc0c5M2XxIbgpb2uWqRaiGk/1/public/basic?alt=json-in-script&callback=onDataLoaded"></script>
+<script src="https://spreadsheets.google.com/feeds/cells/1I1kGCKtjh2n4PuABP9BW2rseb7uC-1puM1geVjDRIcc/2/public/basic?alt=json-in-script&callback=onValidationLoaded">
+</script>
+<script src="https://spreadsheets.google.com/feeds/cells/1I1kGCKtjh2n4PuABP9BW2rseb7uC-1puM1geVjDRIcc/1/public/basic?alt=json-in-script&callback=onDataLoaded">
+</script>
 </html>
