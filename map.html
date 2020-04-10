@@ -57,6 +57,31 @@
       top: 100px;
     }
 
+    #gu-label {
+        top: 320px;
+        left: 25px;
+    }
+    #pr-label {
+        top: 500px;
+        left: 945px;
+    }
+    #as-label {
+        top: 440px;
+        left: 45px;
+    }
+    #ak-label {
+        top: 550px;
+        left: 255px;
+    }
+    #hi-label {
+        top: 570px;
+        left: 445px;
+    }
+    .floating-label {
+        position: absolute;
+        text-align: center;
+    }
+
     #map-type {
       margin: 0 auto;
     }
@@ -72,6 +97,11 @@
     </div>
     <div class="row" id="maps">
       <div class="col-12">
+        <p id="pr-label" class="floating-label">Puerto Rico & <br>U.S. Virgin Islands</p>
+        <p id="gu-label" class="floating-label">Guam & <br>N. Marianas Islands</p>
+        <p id="as-label" class="floating-label">American Samoa</p>
+        <p id="ak-label" class="floating-label">Alaska</p>
+        <p id="hi-label" class="floating-label">Hawaii</p>
         <div id="map-pr" class="small-map"></div>
         <div id="map-gu" class="small-map"></div>
         <div id="map-as" class="small-map"></div>
@@ -230,6 +260,11 @@
           .projection( projection );
         return {path: path, projection: projection};
       }
+    });
+
+    // once the map is rendered, hide the default AK and HI labels.
+    $("text").each(function (index, element) {
+      if (element.innerHTML == "HI" || element.innerHTML == "AK") { $(element).hide() }
     });
   }
 
