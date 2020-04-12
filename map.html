@@ -12,6 +12,13 @@
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
 
+  
+  <!--  -->
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.7/js/select2.min.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.7/css/select2.min.css" rel="stylesheet"/>
+
+
   <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400&display=swap" rel="stylesheet">
 
   <style>
@@ -95,6 +102,10 @@
     #map-type {
       margin: 0 auto;
     }
+
+    optgroup {
+        font-family: 'Raleway', sans-serif !important;
+    }
   </style>
 
 </head>
@@ -102,7 +113,16 @@
   <div class="container">
     <div class="row">
       <div class="col-12">
-        <select id="map-type" style=""></select>
+        <select id="map-type" class="select2" style="">
+            <optgroup id="policy-optgroup" style="font-family: 'Raleway', sans-serif;" label="Policies"></optgroup>
+            <optgroup id="jhu-cases-optgroup" style="font-family: 'Raleway', sans-serif;" label="JHU Case Counts">
+                <option value="jhu-cases">Cases - Total</option>
+                <option value="jhu-cases-per-capita">Cases - Per 100,000 Residents</option>
+                <option value="jhu-deaths">Deaths - Total</option>
+                <option value="jhu-deaths-per-capita">Deaths - Per 100,000 Residents</option>
+                <option value="jhu-mortality">Mortality Rate</option>
+            </optgroup>
+        </select>
       </div>
     </div>
     <div class="row" id="maps">
@@ -124,11 +144,19 @@
 </body>
 <script>
 
-  // refactored the center coordinates and scale, as we may need to conditionally
-  // change them for mobile, etc.
-  var asMapInfo = {"center": [-170.126, -14.20422], "scale": 4000};
-  var prMapInfo = {"center": [-65.7, 17.9], "scale": 1800};
-  var guMapInfo = {"center": [145.7446, 15.1619], "scale": 2800};
+    $(function() {
+      var $select = $('.select2');
+      
+      $select.select2({
+        theme: 'classic'
+      });
+    });
+
+    // refactored the center coordinates and scale, as we may need to conditionally
+    // change them for mobile, etc.
+    var asMapInfo = {"center": [-170.126, -14.20422], "scale": 4000};
+    var prMapInfo = {"center": [-65.7, 17.9], "scale": 1800};
+    var guMapInfo = {"center": [145.7446, 15.1619], "scale": 2800};
 
   // these must match the values in the spreadsheet for each column
   // this could be turned into a function to eliminate many duplicated styles.
