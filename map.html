@@ -562,11 +562,27 @@
     "Wyoming":{"id":"WY","jhu-cases":0,"jhu-deaths":0,}
   };
 
+  // Per https://gist.github.com/yairEO/3f0a5c2d6adbdad14c3c7825abeaab7e
+
+  $.ajax = (($oldAjax) => {
+      // on fail, retry by creating a new Ajax deferred
+      function check(a,b,c){
+          var shouldRetry = b != 'success' && b != 'parsererror';
+          if( shouldRetry && --this.retries > 0 )
+              setTimeout(() => { $.ajax(this) }, this.retryInterval || 100);
+      }
+  
+      return settings => $oldAjax(settings).always(check)
+  })($.ajax);
+
+
   var latestCasesField;
   var setLatestCasesField = function () {
     var timeSeriesCaseURL = "https://covid-api.bit.io/time_series_covid19_confirmed_us";
     return $.ajax({
       async: false,
+      retries: 3,
+      retryInterval: 2000,
       url: timeSeriesCaseURL + "?fips=eq.1001",
       headers: {'Accept-Profile': 'csse_covid_19_data'},
       success: function(data) {
@@ -585,6 +601,8 @@
     var lookupTableURL = "https://covid-api.bit.io/uid_iso_fips_look_up_table"
     return $.ajax({
       async: false,
+      retries: 3,
+      retryInterval: 2000,
       url: timeSeriesCaseURL + "?select=" + latestCasesField + ",province_state,admin2",
       headers: {'Accept-Profile': 'csse_covid_19_data'},
       success: function(data) {
@@ -603,6 +621,8 @@
     var timeSeriesDeathURL = "https://covid-api.bit.io/time_series_covid19_deaths_us"
     return $.ajax({
       async: false,
+      retries: 3,
+      retryInterval: 2000,
       url: timeSeriesDeathURL + "?fips=eq.1",
       headers: {'Accept-Profile': 'csse_covid_19_data'},
       success: function(data) {
@@ -621,6 +641,8 @@
     var lookupTableURL = "https://covid-api.bit.io/uid_iso_fips_look_up_table"
     return $.ajax({
       async: false,
+      retries: 3,
+      retryInterval: 2000,
       url: timeSeriesDeathURL + "?select=" + latestCasesField + ",province_state,admin2",
       headers: {'Accept-Profile': 'csse_covid_19_data'},
       success: function(data) {
@@ -638,6 +660,8 @@
     var lookupTableURL = "https://covid-api.bit.io/uid_iso_fips_look_up_table"
     return $.ajax({
       async: false,
+      retries: 3,
+      retryInterval: 2000,
       url: lookupTableURL + "?select=province_state,population&country_region=eq.US&fips=gt.0&fips=lt.100",
       headers: {'Accept-Profile': 'csse_covid_19_data'},
       success: function(data) {
