@@ -4,6 +4,7 @@
   <title>NGA Coronavirus Actions Map</title>
   <meta charset="UTF-8">
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+  
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.3/d3.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/1.6.9/topojson.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/datamaps/0.5.9/datamaps.usa.min.js" integrity="sha256-1IC+WTTnGREYT+btQjFzzdrlXoRvvGW/mlO6pfl6LnA=" crossorigin="anonymous"></script>
@@ -20,6 +21,8 @@
 
 
   <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400&display=swap" rel="stylesheet">
+  
+  <script src="assets/rainbowvis.js"></script>
 
   <style>
     body {
@@ -27,6 +30,9 @@
     }
     .datamaps-legend dl dt {
         font-family: 'Raleway', sans-serif;
+    }
+    .hoverinfo {
+        font-family: 'Raleway', sans-serif !important;
     }
     .labels text {
         font-family: 'Raleway', sans-serif !important;
@@ -160,9 +166,7 @@
 
   // these must match the values in the spreadsheet for each column
   // this could be turned into a function to eliminate many duplicated styles.
-  var fillFactory = function (validOptions, visualizationType) {
-    console.log(validOptions);
-    console.log(visualizationType);
+  var sheetFillFactory = function (validOptions, visualizationType) {
     var fills = {}
     var colorRamp = [
         "#401E3C",
@@ -185,21 +189,109 @@
   }
   
   // iterate full sheet contents and pull out the relevant data for this map style
-  var dataFactory = function (sheetData, mapType) {
+  var sheetDataFactory = function (data, mapType) {
     var mapData = {};
     for (region in sheetData) {
       mapData[region] = {"fillKey": sheetData[region][mapType], "info": sheetData[region][mapType]}
     };
     return mapData;
   }
+  
+  var jhuFillFactory = function (data) {
+  
+    var numberOfItems = 8;
+    var rainbow = new Rainbow(); 
+    rainbow.setNumberRange(1, numberOfItems);
+    rainbow.setSpectrum('red', 'black');
+    var s = '';
+    for (var i = 1; i <= numberOfItems; i++) {
+        var hexColour = rainbow.colourAt(i);
+        s += '#' + hexColour + ', ';
+    }
+    var fills = {}
+    var colorRamp = [
+        "#401E3C",
+        "#803C79",
+        "#BF5AB5",
+        "#E66CD9",
+        "#FF78F1"
+    ]
+    switch (visualizationType) {
+      case "Binary":
+        fills[validOptions[0]] = '#401E3C';
+        fills[validOptions[1]] = '#96FF6B';
+      case "Gradient":
+        for (i = 0; i < validOptions.length; i++) {
+          fills[validOptions[i]] = colorRamp[i]
+        }
+    }
+    fills["defaultFill"] = '#96FF6B';
+    return fills
+  }
+  
+  // iterate full sheet contents and pull out the relevant data for this map style
+  var jhuDataFactory = function (jhuData, mapType) {
+
+    var maxValue = 0;
+    for (region in jhuData) {
+      if (jhuData[region][mapType] > maxValue) { maxValue = jhuData[region][mapType] };
+    };
+
+    var bins = [];
+    var binCount = 0;
+    var numOfBuckets = 10;
+    var interval = maxValue / numOfBuckets;
+
+    //Setup Bins
+    for(var i = 0; i < numOfBuckets; i++){
+      bins.push({
+        binNum: binCount,
+        minNum: i * interval,
+        maxNum: (i + 1) * interval,
+      })
+      binCount++;
+    }
+
+    var mapData = {};
+    console.log(mapType);
+    for (regionName in jhuData) {
+      var id = jhuData[regionName]['id']
+      var value = Math.round(jhuData[regionName][mapType] * 100) / 100
+      mapData[id] = {"info": value};
+      for (var j = 0; j < bins.length; j++){
+        var bin = bins[j];
+        if(value == 0 ){
+          mapData[id]['fillKey'] = 1;
+        } else if (value > bin.minNum && value <= bin.maxNum){
+          mapData[id]['fillKey'] = j + 1;
+        }
+      }  
+    }
+
+    var fills = {};
+    var rainbow = new Rainbow(); 
+    rainbow.setNumberRange(1, numOfBuckets);
+    rainbow.setSpectrum('gainsboro', 'darkolivegreen');
+    for (var i = 1; i <= numOfBuckets; i++) {
+        var hexColour = rainbow.colourAt(i);
+        fills[i] = '#' + hexColour;
+
+    }
+    return {"data": mapData, "fills": fills};
+  }
 
   // fully reinstantiates all four maps with new data and with new fill values.
   // map.updateChloropleth can be used to replace the data in the map, but I don't
   // think that new fills can be put in, so I went with this full replacement instead.
-  var resetAllMaps = function (fills, data) {
+  var resetAllMaps = function (fills, data, showLegend) {
   
     $(".main-map").html("")
     $(".small-map").html("")
+    
+    var popupTemplate = function(geography, data) {
+      return '<div class="hoverinfo"><strong>' + geography.properties.name + '</strong></div>\
+        <div class="hoverinfo"><em>' + data.info + '</em></div>'
+    }
 
     // using this default usa dataset will allow us to include AK and HI easily.
     // it should also give us the detailed labels for the east coast which is
@@ -209,10 +301,7 @@
       geographyConfig: {
         highlightBorderColor: '#FFC800',
         highlightBorderWidth: 2,
-        popupTemplate: function(geography, data) {
-          return '<div class="hoverinfo"><strong>' + geography.properties.name + '</strong></div>\
-                 <div class="hoverinfo"><em>' + data.info + '</em></div>'
-        }
+        popupTemplate: popupTemplate
       },
       scope:"usa",
       fills: fills,
@@ -221,7 +310,7 @@
 
     <!-- mainmap.labels({labelColor: 'blue', fontSize: 12}); -->
     mainmap.labels();
-    mainmap.legend();
+    if (showLegend == true) {mainmap.legend()};
 
     // the following 3 maps all use the same data source file, but with
     // different scopes. In reality, the scope for all of them could just be
@@ -234,10 +323,7 @@
         dataUrl: "data/full-usa.json",
         highlightBorderColor: '#FFC800',
         highlightBorderWidth: 2,
-        popupTemplate: function(geography, data) {
-          return '<div class="hoverinfo"><strong>' + geography.properties.Name + '</strong></div>\
-                 <div class="hoverinfo"><em>' + data.info + '</em></div>'
-        }
+        popupTemplate: popupTemplate
       },
       scope:"puerto-rico-virgin-islands",
       fills: fills,
@@ -260,10 +346,7 @@
         dataUrl: "data/full-usa.json",
         highlightBorderColor: '#FFC800',
         highlightBorderWidth: 2,
-        popupTemplate: function(geography, data) {
-          return '<div class="hoverinfo"><strong>' + geography.properties.Name + '</strong></div>\
-                 <div class="hoverinfo"><em>' + data.info + '</em></div>'
-        }
+        popupTemplate: popupTemplate
       },
       scope:"guam-marianas",
       fills: fills,
@@ -287,10 +370,7 @@
         dataUrl: "data/full-usa.json",
         highlightBorderColor: '#FFC800',
         highlightBorderWidth: 2,
-        popupTemplate: function(geography, data) {
-          return '<div class="hoverinfo"><strong>' + geography.properties.Name + '</strong></div>\
-                 <div class="hoverinfo"><em>' + data.info + '</em></div>'
-        }
+        popupTemplate: popupTemplate
       },
       scope:"american-samoa",
       fills: fills,
@@ -323,8 +403,8 @@
 
   var visualizationTypes = {};
   var validationRulesets = {};
-  var getSheetData = function(data) {
-    var sheetData = {}
+  var sheetData = {};
+  var parseSheetData = function(data) {
     var headers = {};
     var currentStateTerritory;
     for (var entry of data.feed.entry) {
@@ -363,32 +443,38 @@
       }
     }
     
-    // put all of the headers into a dropdown picker
+    // put all of the headers into the dropdown picker
     var optionsStr = "";
+    var selectedSet = false
     for (header in headers) {
       if (visualizationTypes[headers[header]] != false) { 
-        optionsStr += "<option>" + headers[header] + "</option>"
+        if (selectedSet == false) {
+          selectedSet = true;
+          optionsStr += "<option selected>" + headers[header] + "</option>";
+        } else {
+          optionsStr += "<option>" + headers[header] + "</option>";
+        }
       }
     }
-    $("#map-type").html(optionsStr);
-
-    return sheetData
+    $("#policy-optgroup").html(optionsStr);
   }
 
-  var fullData;
-  var onDataLoaded = function(data) {
-    fullData = getSheetData(data);
-    updateMaps()
-  };
-  
   var updateMaps = function() {
     var mapType = $("#map-type").val();
-    var validOptions = validationData[validationRulesets[mapType]]
-    var visualizationType = visualizationTypes[mapType]
-    
-    var fills = fillFactory(validOptions, visualizationType);
-    mapData = dataFactory(fullData, mapType);
-    resetAllMaps(fills, mapData)
+    var fills = {};
+    var mapData = {};
+    if (validationRulesets.hasOwnProperty(mapType)) {
+      var validOptions = validationData[validationRulesets[mapType]];
+      var visualizationType = visualizationTypes[mapType];
+      fills = sheetFillFactory(validOptions, visualizationType);
+      mapData = sheetDataFactory(sheetData, mapType);
+      resetAllMaps(fills, mapData, true);
+    } else if (mapType.indexOf("jhu") == 0) {
+      mapDataAndFills = jhuDataFactory(allCounts, mapType);
+      fills = mapDataAndFills['fills'];
+      mapData = mapDataAndFills['data'];
+      resetAllMaps(fills, mapData, false);
+    }
   }
   
   $( "#map-type" ).change(function() {
@@ -407,7 +493,7 @@
       var row = parseInt(cellName.split(':')[1])
       var content = entry.content.$t;
 
-      // for the first row, push to headers object. skip if it's column "A" ("State")
+      // create lookup from the headers
       if (row == 1) {
         headers[column] = content;
         validationData[headers[column]] = []
@@ -417,6 +503,173 @@
     }
   };
   
+  var allCounts = {
+    "Alabama":{"id":"AL","jhu-cases":0,"jhu-deaths":0},
+    "Alaska":{"id":"AK","jhu-cases":0,"jhu-deaths":0},
+    "American Samoa":{"id":"AS","jhu-cases":0,"jhu-deaths":0},
+    "Arizona":{"id":"AZ","jhu-cases":0,"jhu-deaths":0},
+    "Arkansas":{"id":"AR","jhu-cases":0,"jhu-deaths":0},
+    "California":{"id":"CA","jhu-cases":0,"jhu-deaths":0},
+    "Northern Mariana Islands":{"id":"MP","jhu-cases":0,"jhu-deaths":0},
+    "Colorado":{"id":"CO","jhu-cases":0,"jhu-deaths":0},
+    "Connecticut":{"id":"CT","jhu-cases":0,"jhu-deaths":0},
+    "Delaware":{"id":"DE","jhu-cases":0,"jhu-deaths":0},
+    "District of Columbia":{"id":"DC","jhu-cases":0,"jhu-deaths":0},
+    "Florida":{"id":"FL","jhu-cases":0,"jhu-deaths":0},
+    "Georgia":{"id":"GA","jhu-cases":0,"jhu-deaths":0},
+    "Guam":{"id":"GU","jhu-cases":0,"jhu-deaths":0},
+    "Hawaii":{"id":"HI","jhu-cases":0,"jhu-deaths":0},
+    "Idaho":{"id":"ID","jhu-cases":0,"jhu-deaths":0},
+    "Illinois":{"id":"IL","jhu-cases":0,"jhu-deaths":0},
+    "Indiana":{"id":"IN","jhu-cases":0,"jhu-deaths":0},
+    "Iowa":{"id":"IA","jhu-cases":0,"jhu-deaths":0},
+    "Kansas":{"id":"KS","jhu-cases":0,"jhu-deaths":0},
+    "Kentucky":{"id":"KY","jhu-cases":0,"jhu-deaths":0},
+    "Louisiana":{"id":"LA","jhu-cases":0,"jhu-deaths":0},
+    "Maine":{"id":"ME","jhu-cases":0,"jhu-deaths":0},
+    "Maryland":{"id":"MD","jhu-cases":0,"jhu-deaths":0},
+    "Massachusetts":{"id":"MA","jhu-cases":0,"jhu-deaths":0},
+    "Michigan":{"id":"MI","jhu-cases":0,"jhu-deaths":0},
+    "Minnesota":{"id":"MN","jhu-cases":0,"jhu-deaths":0},
+    "Mississippi":{"id":"MS","jhu-cases":0,"jhu-deaths":0},
+    "Missouri":{"id":"MO","jhu-cases":0,"jhu-deaths":0},
+    "Montana":{"id":"MT","jhu-cases":0,"jhu-deaths":0},
+    "Nebraska":{"id":"NE","jhu-cases":0,"jhu-deaths":0},
+    "Nevada":{"id":"NV","jhu-cases":0,"jhu-deaths":0},
+    "New Hampshire":{"id":"NH","jhu-cases":0,"jhu-deaths":0},
+    "New Jersey":{"id":"NJ","jhu-cases":0,"jhu-deaths":0},
+    "New Mexico":{"id":"NM","jhu-cases":0,"jhu-deaths":0,},
+    "New York":{"id":"NY","jhu-cases":0,"jhu-deaths":0},
+    "North Carolina":{"id":"NC","jhu-cases":0,"jhu-deaths":0},
+    "North Dakota":{"id":"ND","jhu-cases":0,"jhu-deaths":0},
+    "Ohio":{"id":"OH","jhu-cases":0,"jhu-deaths":0},
+    "Oklahoma":{"id":"OK","jhu-cases":0,"jhu-deaths":0},
+    "Oregon":{"id":"OR","jhu-cases":0,"jhu-deaths":0},
+    "Pennsylvania":{"id":"PA","jhu-cases":0,"jhu-deaths":0},
+    "Puerto Rico":{"id":"PR","jhu-cases":0,"jhu-deaths":0},
+    "Rhode Island":{"id":"RI","jhu-cases":0,"jhu-deaths":0},
+    "South Carolina":{"id":"SC","jhu-cases":0,"jhu-deaths":0},
+    "South Dakota":{"id":"SD","jhu-cases":0,"jhu-deaths":0},
+    "Tennessee":{"id":"TN","jhu-cases":0,"jhu-deaths":0},
+    "Texas":{"id":"TX","jhu-cases":0,"jhu-deaths":0},
+    "Utah":{"id":"UT","jhu-cases":0,"jhu-deaths":0},
+    "Vermont":{"id":"VT","jhu-cases":0,"jhu-deaths":0},
+    "Virginia":{"id":"VA","jhu-cases":0,"jhu-deaths":0},
+    "Virgin Islands":{"id":"USVI","jhu-cases":0,"jhu-deaths":0},
+    "Washington":{"id":"WA","jhu-cases":0,"jhu-deaths":0},
+    "West Virginia":{"id":"WV","jhu-cases":0,"jhu-deaths":0},
+    "Wisconsin":{"id":"WI","jhu-cases":0,"jhu-deaths":0},
+    "Wyoming":{"id":"WY","jhu-cases":0,"jhu-deaths":0,}
+  };
+
+  var latestCasesField;
+  var setLatestCasesField = function () {
+    var timeSeriesCaseURL = "https://covid-api.bit.io/time_series_covid19_confirmed_us";
+    return $.ajax({
+      async: false,
+      url: timeSeriesCaseURL + "?fips=eq.1001",
+      headers: {'Accept-Profile': 'csse_covid_19_data'},
+      success: function(data) {
+        for (var field in data[0]) {
+          var splitName = field.split("_")
+          if (splitName.length == 3 &&  splitName[2] == "20") {
+            latestCasesField = field;
+          }
+        }
+      }
+    });
+  }
+
+  function getJHUCases () {
+    var timeSeriesCaseURL = "https://covid-api.bit.io/time_series_covid19_confirmed_us"
+    var lookupTableURL = "https://covid-api.bit.io/uid_iso_fips_look_up_table"
+    return $.ajax({
+      async: false,
+      url: timeSeriesCaseURL + "?select=" + latestCasesField + ",province_state,admin2",
+      headers: {'Accept-Profile': 'csse_covid_19_data'},
+      success: function(data) {
+        for (rowNum in data) {
+          var row = data[rowNum];
+          if (allCounts.hasOwnProperty(row['province_state'])) {
+            allCounts[row['province_state']]['jhu-cases'] += row[latestCasesField];
+          }
+        }
+      }
+    });
+  };
+
+  var latestDeathsField;
+  var setLatestDeathsField = function () { 
+    var timeSeriesDeathURL = "https://covid-api.bit.io/time_series_covid19_deaths_us"
+    return $.ajax({
+      async: false,
+      url: timeSeriesDeathURL + "?fips=eq.1",
+      headers: {'Accept-Profile': 'csse_covid_19_data'},
+      success: function(data) {
+        for (var field in data[0]) {
+          var splitName = field.split("_")
+          if (splitName.length == 3 &&  splitName[2] == "20") {
+            latestDeathsField = field;
+          }
+        }
+      }
+    });
+  }
+  
+  function getJHUDeaths () {
+    var timeSeriesDeathURL = "https://covid-api.bit.io/time_series_covid19_deaths_us"
+    var lookupTableURL = "https://covid-api.bit.io/uid_iso_fips_look_up_table"
+    return $.ajax({
+      async: false,
+      url: timeSeriesDeathURL + "?select=" + latestCasesField + ",province_state,admin2",
+      headers: {'Accept-Profile': 'csse_covid_19_data'},
+      success: function(data) {
+        for (rowNum in data) {
+          var row = data[rowNum];
+          if (allCounts.hasOwnProperty(row['province_state'])) {
+            allCounts[row['province_state']]['jhu-deaths'] += row[latestCasesField];
+          }
+        }
+      }
+    });
+  };
+
+  function generatePerCapitaData () {
+    var lookupTableURL = "https://covid-api.bit.io/uid_iso_fips_look_up_table"
+    return $.ajax({
+      async: false,
+      url: lookupTableURL + "?select=province_state,population&country_region=eq.US&fips=gt.0&fips=lt.100",
+      headers: {'Accept-Profile': 'csse_covid_19_data'},
+      success: function(data) {
+        for (rowNum in data) {
+          var pop = data[rowNum]['population'];
+          var name = data[rowNum]['province_state'];
+          console.log(name);
+          if (allCounts.hasOwnProperty(name)) {
+            allCounts[name]['population'] = pop;
+            allCounts[name]['jhu-cases-per-capita'] = (100000 * allCounts[name]['jhu-cases']) / pop;
+            allCounts[name]['jhu-deaths-per-capita'] = (100000 * allCounts[name]['jhu-deaths']) / pop;
+            if (allCounts[name]['jhu-deaths'] == 0) {
+              allCounts[name]['jhu-mortality'] = 0
+            } else {
+              allCounts[name]['jhu-mortality'] = (100 * allCounts[name]['jhu-deaths']) / allCounts[name]['jhu-cases'];
+            }
+          }
+        }
+      }
+    });
+  };
+
+  var onDataLoaded = function(data) {
+    parseSheetData(data);
+    setLatestCasesField()
+        .then(function (result) { getJHUCases() })
+        .then(function (result) { setLatestDeathsField() })
+        .then(function (result) { getJHUDeaths() })
+        .then(function (result) { generatePerCapitaData() });
+    updateMaps();
+  };
+
 </script>
 <script src="https://spreadsheets.google.com/feeds/cells/1I1kGCKtjh2n4PuABP9BW2rseb7uC-1puM1geVjDRIcc/2/public/basic?alt=json-in-script&callback=onValidationLoaded">
 </script>
