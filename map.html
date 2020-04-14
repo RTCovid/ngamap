@@ -4,24 +4,14 @@
   <title>NGA Coronavirus Actions Map</title>
   <meta charset="UTF-8">
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
-  
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.3/d3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.3/d3.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/1.6.9/topojson.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/datamaps/0.5.9/datamaps.usa.min.js" integrity="sha256-1IC+WTTnGREYT+btQjFzzdrlXoRvvGW/mlO6pfl6LnA=" crossorigin="anonymous"></script>
 
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
-  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
-
-  
-  <!--  -->
-  
   <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.7/js/select2.min.js"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.7/css/select2.min.css" rel="stylesheet"/>
-
-
   <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400&display=swap" rel="stylesheet">
-  
+
   <script src="assets/rainbowvis.js"></script>
 
   <style>
@@ -39,7 +29,6 @@
         font-size: 12px !important;
     }
     #maps {
-      display: inline-flex;
       position: relative;
     }
     .map-panel {
@@ -53,44 +42,51 @@
       width: 200px;
     }
     .main-map {
-      height: 600px;
-    }
-    #map-pr {
-      height: 60px;
-      width: 100px;
-      bottom: 0;
-      right: 100px;
-    }
-    #map-as {
-      height: 80px;
-      bottom: 150px;
-      left: 0;
-    }
-    #map-gu {
-      left: 0;
-      top: 100px;
+      width: 100%;
+      height: calc(100vw * .6);
     }
 
-    #gu-label {
-        top: 300px;
-        left: 45px;
+    #map-pr {
+      height: 6%;
+      width: 10%;
+      bottom: 0;
+      right: 8%;
     }
     #pr-label {
-        top: 530px;
-        left: 985px;
-    }
-    #as-label {
-        top: 405px;
-        left: 95px;
-    }
-    #cnmi-label {
-        top: 220px;
-        left: 75px;
+        top: 88%;
+        left: 82%;
     }
     #usvi-label {
-        top: 560px;
-        left: 1060px;
+        top: 95%;
+        left: 90%;
     }
+    
+    #map-as {
+      height: 8%;
+      width: 10%;
+      bottom: 26%;
+      left: 0;
+    }
+    #as-label {
+        top: 68%;
+        left: 5%;
+    }
+
+    #map-gu {
+      left: 0;
+      top: 10%;
+      height: 25%;
+      width: 15%;
+    }
+    #gu-label {
+        top: 34%;
+        left: 3%;
+    }
+    #cnmi-label {
+        top: 24%;
+        left: 5%;
+    }
+
     #ak-label {
         top: 550px;
         left: 255px;
@@ -178,13 +174,13 @@
     switch (visualizationType) {
       case "Binary":
         fills[validOptions[0]] = '#401E3C';
-        fills[validOptions[1]] = '#96FF6B';
+        fills[validOptions[1]] = '#dddddd';
       case "Gradient":
         for (i = 0; i < validOptions.length; i++) {
           fills[validOptions[i]] = colorRamp[i]
         }
     }
-    fills["defaultFill"] = '#96FF6B';
+    fills["defaultFill"] = '#dddddd';
     return fills
   }
   
@@ -219,13 +215,13 @@
     switch (visualizationType) {
       case "Binary":
         fills[validOptions[0]] = '#401E3C';
-        fills[validOptions[1]] = '#96FF6B';
+        fills[validOptions[1]] = '#dddddd';
       case "Gradient":
         for (i = 0; i < validOptions.length; i++) {
           fills[validOptions[i]] = colorRamp[i]
         }
     }
-    fills["defaultFill"] = '#96FF6B';
+    fills["defaultFill"] = '#dddddd';
     return fills
   }
   
@@ -308,7 +304,7 @@
       data: data,
     });
 
-    <!-- mainmap.labels({labelColor: 'blue', fontSize: 12}); -->
+    mainmap.labels({labelColor: 'blue', fontSize: 12});
     mainmap.labels();
     if (showLegend == true) {mainmap.legend()};
 
@@ -669,6 +665,10 @@
         .then(function (result) { generatePerCapitaData() });
     updateMaps();
   };
+
+  $(window).on('resize', function() {
+    mainmap.resize();
+  });
 
 </script>
 <script src="https://spreadsheets.google.com/feeds/cells/1I1kGCKtjh2n4PuABP9BW2rseb7uC-1puM1geVjDRIcc/2/public/basic?alt=json-in-script&callback=onValidationLoaded">
