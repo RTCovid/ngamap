@@ -135,8 +135,6 @@
         <p id="gu-label" class="floating-label">GU</p>
         <p id="cnmi-label" class="floating-label">CNMI</p>
         <p id="as-label" class="floating-label">AS</p>
-        <!-- <p id="ak-label" class="floating-label">Alaska</p> -->
-        <!-- <p id="hi-label" class="floating-label">Hawaii</p> -->
         <div id="map-pr" class="small-map"></div>
         <div id="map-gu" class="small-map"></div>
         <div id="map-as" class="small-map"></div>
@@ -147,6 +145,10 @@
 </body>
 <script>
 
+  // These are the ends of the color ramp range that are applied to all lists.
+  // If there are two options in the list, then only these colors will be used.
+  // For lists with more than two colors, gradient colors will be calculated and
+  // appliead to intermediate values using rainbowvis.js
   var colorRampDark = "#CC0054";
   var colorRampLight = "#dcdcdc";
 
@@ -158,18 +160,11 @@
       });
     });
 
-    // refactored the center coordinates and scale, as we may need to conditionally
+    // center coordinates and scale, as we may need to conditionally
     // change them for mobile, etc.
     var asMapInfo = {"center": [-170.126, -14.20422], "scale": 4000};
     var prMapInfo = {"center": [-65.7, 17.9], "scale": 1800};
     var guMapInfo = {"center": [145.7446, 15.1619], "scale": 2800};
-
-
-    // https://stackoverflow.com/a/19506234/3873885
-    function range(start, count) {
-      return Array.apply(0, Array(count))
-        .map((element, index) => index + start);
-    }
 
   // iterate full sheet contents and pull out the relevant data for this map style
   var sheetDataFactory = function (data, mapType, valueList) {
@@ -288,7 +283,6 @@
       }
     });
 
-    mainmap.labels({labelColor: 'black', fontSize: 12});
     mainmap.labels();
     if (showLegend == true) {mainmap.legend()};
 
@@ -367,11 +361,6 @@
         return {path: path, projection: projection};
       }
     });
-
-    // once the map is rendered, hide the default AK and HI labels.
-    //$("text").each(function (index, element) {
-    //  if (element.innerHTML == "HI" || element.innerHTML == "AK") { $(element).hide() }
-    //});
   }
 
   var getCellName = function(label) {
@@ -459,9 +448,11 @@
     updateMaps();
   });
 
+  // Pull the dropdown lists that are defined in the second google
+  // sheet. These are used to create the map legends and color ramps.
   var validationData = {}
   var onValidationLoaded = function(data) {
-    
+
     var headers = {};
     for (var entry of data.feed.entry) {
         
@@ -542,7 +533,6 @@
   };
 
   // Per https://gist.github.com/yairEO/3f0a5c2d6adbdad14c3c7825abeaab7e
-
   $.ajax = (($oldAjax) => {
       // on fail, retry by creating a new Ajax deferred
       function check(a,b,c){
@@ -647,7 +637,6 @@
         for (rowNum in data) {
           var pop = data[rowNum]['population'];
           var name = data[rowNum]['province_state'];
-          console.log(name);
           if (allCounts.hasOwnProperty(name)) {
             allCounts[name]['population'] = pop;
             allCounts[name]['jhu-cases-per-capita'] = (100000 * allCounts[name]['jhu-cases']) / pop;
